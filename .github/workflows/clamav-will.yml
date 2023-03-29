@@ -1,0 +1,37 @@
+name: ClamAV Scan
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  clamscan:
+    runs-on: ubuntu-latest
+    name: Run Clamscan
+    container:
+      image: 'alpine:latest'
+    steps:
+    - uses: actions/checkout@master
+      with:
+        ref: ${{ github.ref }}
+        fetch-depth: '0' 
+    - name: install clamscan
+      run: |
+        apk update
+        apk add clamav clamav-libunrar
+    - name: update clam database
+      run: |
+        freshclam --no-warnings
+    - name: run clamscan
+      run: | 
+        clamscan --recursive --allmatch --infected --max-scantime=0 --max-filesize=4094M --max-scansize=4094M --max-files=1000000 --max-recursion=100000 --max-dir-recursion=100000 --disable-cache | tee clamscan
+        REPORTED=`grep -i ^infected clamscan | awk '{print $NF}'`
+        echo "(info) placeholder - process output into standardized report"
+        echo "(info) placeholder - backupd standardized report to s3 destination"
+        if [[ $REPORTED -ne 0 ]]
+        then
+          echo "(error) clamscan reported $REPORTED infected files in scan at `date`"
+          echo "(info) placeholder - backup infected files to s3 analysis target"
+          exit 1
+        fi
+
